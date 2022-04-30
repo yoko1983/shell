@@ -1,6 +1,6 @@
-This shell is get lock key and execute the command.
+This shell is get lock key and execute the command with using Postgresql.
 
-1. Install postgresql
+1. Install Postgresql
 1. Configre psql
      - Password file: .pgpass
      - Environment variable: PGHOST, PGPORT, PGDATABASE, PGUSER
