@@ -45,7 +45,7 @@ SQL_LOCK="
      \echo 'LOCK_SHELL_CTRL--LOCK_KEY_NG'
      \q
    \endif
-   \! ./run_cmd.sh \"${1}\"
+   \! ./exec_cmd.sh \"${1}\"
    end;
    "
 
