@@ -1,14 +1,25 @@
 #!/bin/bash
 #
-# 排他を行った上でコマンドを実行し排他解除を行います。
+# Get lock key and execute the command.
+# After the command is completed, the lock key is released.
+# This shell is using Postgressql.
 #
-# ${1} コマンド
-# ${2} 排他キー
-# ${3} nowait - 処理を打ち切り、指定なし - 処理を継続
+# Arguments: 
+#   ${1} command  ex; "ls 1"
+#   ${2} lockkey
+#   ${3} nowait(Optional) If locked, the command is terminated.
+# Output:
+#   Writes stdout of the command to stdout
+# Return:
+#   0 - The command terminated normally
+#   1 - The command terminated abnormally
+#   2 - Unable to get lock key
+#   3 - Lock key not found
+#   9 - DB error
 #
 
-# シェル関数
-# 　コマンド実行結果を標準出力
+# Function
+# 　Stdout of command execution results
 function echo_cmd_stdout() {
   CMD_FLAG=false
   echo "${1}" | while read -r LINE; do
@@ -23,7 +34,7 @@ function echo_cmd_stdout() {
 
 }
 
-# 排他SQL
+# SQL for getting lock key
 SQL_LOCK="
    begin;
    select exists(select * from lock where key='${2}' for update ${3}) as is_locked;
@@ -41,21 +52,21 @@ SQL_LOCK="
 RET_VAL=$(psql -tA -v ON_ERROR_STOP=true -f <(echo "${SQL_LOCK}") 2>&1)
 RET_CODE="${?}"
 
-#排他エラー
+# Unable to get lock key
 if [[ "${RET_VAL}" =~ "could not obtain lock on row in relation \"lock\"" ]]; then
   exit 2
-#排他キー検索エラー
+# Lock key not found
 elif  [[ "${RET_VAL}" =~ "LOCK_SHELL_CTRL--LOCK_KEY_NG" ]]; then
   exit 3
-#コマンド実行エラー
+# The command terminated abnormally
 elif [[ "${RET_VAL}" =~ "LOCK_SHELL_CTRL--CMD_NG" ]]; then
   echo_cmd_stdout "${RET_VAL}"
   exit 1
-#PSQLコマンドエラー
+# DB error
 elif [[ "${RET_CODE}" -ne 0 ]]; then
   exit 9
 fi
 
-#正常
+# The command terminated normally
 echo_cmd_stdout "${RET_VAL}"
 exit 0
