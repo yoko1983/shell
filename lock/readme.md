@@ -1,4 +1,4 @@
-This shell is get lock key and execute the command.
+This shell is get lock key and execute the command with using Postgresql.
 
 1. Install postgresql
 1. Configre psql
