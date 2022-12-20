@@ -15,6 +15,7 @@
 #   1 - The command terminated abnormally
 #   2 - Unable to get lock key
 #   3 - Lock key not found
+#   4 - SQL Error
 #   9 - DB error
 #
 
@@ -38,6 +39,10 @@ function echo_cmd_stdout() {
 SQL_LOCK="
    begin;
    select exists(select * from lock where key='${2}' for update ${3}) as is_locked;
+   \if :ERROR
+     \echo 'LOCK_SHELL_CTRL--LOCK_SQL_ERROR=':SQLSTATE
+     \q
+   \endif
    \gset
    \if :is_locked
      \echo 'LOCK_SHELL_CTRL--LOCK_KEY_OK'
@@ -49,12 +54,15 @@ SQL_LOCK="
    end;
    "
 
-RET_VAL=$(psql -tA -v ON_ERROR_STOP=true -f <(echo "${SQL_LOCK}") 2>&1)
+RET_VAL=$(psql -tA -f <(echo "${SQL_LOCK}") 2>&1)
 RET_CODE="${?}"
 
 # Unable to get lock key
-if [[ "${RET_VAL}" =~ "could not obtain lock on row in relation \"lock\"" ]]; then
+if [[ "${RET_VAL}" =~ "LOCK_SHELL_CTRL--LOCK_SQL_ERROR=55P03" ]]; then
   exit 2
+# SQL Error
+elif  [[ "${RET_VAL}" =~ "LOCK_SHELL_CTRL--LOCK_SQL_ERROR" ]]; then
+  exit 4
 # Lock key not found
 elif  [[ "${RET_VAL}" =~ "LOCK_SHELL_CTRL--LOCK_KEY_NG" ]]; then
   exit 3
